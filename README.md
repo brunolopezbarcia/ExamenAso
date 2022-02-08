@@ -87,17 +87,147 @@ search iescalquera.local
 
 Ahora tenemos que configurar el cliete01 que se hace de forma grafica; la ip de este cliente es la **172.16.5.20** y la direccion del servidor DNS es **172.16.5.10** y en dominios de busqueda **iescalquera.local** 
 
-Tenemos que configurar el archivo /etc/nsswitch.conf pàra poder hacer ping con el nombre dns debido a que nuestro nombre dns termina en .local.
+Tenemos que configurar el archivo /etc/nsswitch.conf para poder hacer ping con el nombre dns debido a que nuestro nombre dns termina en .local.
 Tenemos que modificar la linea host a:
 
 ```
 hosts   files dns
 ````
 
+# 
+
+### Instalacion del servidor DHCP
+
+Lo primero que tenemos que hacer es instalar el paquete con el siguiente comando:
+
+```
+apt-get install isc-dhcp-server
+````
+
+Ahora tenemos que editar el fichero */etc/dhcp/dhcp.conf*
+
+Debemos de añadir lo siguiente:
+
+```
+option domain-name "iescalquera.local";
+option domain-name-servers 172.16.5.10;
+option routers 172.16.5.1;
+
+default-lease-time 3600;
+max-lease-time 7200;
+````
+
+Tamen tenemos que desmarcar la linea de *authoritative*
+
+Ahora debemos de agregar el rango de las ips del servidor DHCP:
+
+```
+subnet 172.16.5.0 netmask 255.255.255.0 {
+    range 172.16.5.100 172.16.5.119;
+}
+
+En el fichero */etc/default/isc-dhcp-server.conf* y en el parametro *INTERFACESv4=* y poner el nombre de la interfaz de nuestra tarjeta de red en este caso *enp0s3*
+
+Y ahora debemos de reiniciar el servicio:
+
+```
+systemctl restart isc-dhcp-server
+````
+
+#### Configuracion del cliente02 
+
+La configuracion de este cliente al igual que con el otro cliente se hace de manera grafica debemos de ir a editar la conexion a internet y en *Configuracion IPv4* poner en metodo *Automatico(DHCP)* una vez hecho esto debemos de desconectar  y volver a conectarnos a internet; esto se hace haciendo click izquierdo sobre el icono de red y en la parte de **Activar rede** debemos de desactivarla y despues volver a activarla.
+
+Al igual que con el otro cliente debemos de modificar el fichero */etc/nsswitch.conf*.
+
+Tenemos que modificar la linea host a:
+
+```
+hosts   files dns
+````
+
+### Reservas DHCP
+
+Ahora debemos de crear una reserva del cliente02. Lo que debemos de añadir al fichero */etc/dhcp/dhcp.conf* es lo siguiente:
+
+```
+host uclient02{
+    hardware ethernet 08:00:27:34:21:be;
+    fixed-address 172.16.5.121;
+};
+````
+Tenemos que reiniciar el servicio para que se apliquen los cambios con el comando:
+
+```
+service isc-dhcp-service restart
+````
+
+#### Configuracion cliente02
+Ahora debemos de reiniciar el servicio de red en el cliente con el comando:
+
+```
+sudo dhclient -v enp0s3
+````
+
+### Asignar nombre al equipo cliente
+
+Ahora podemos hacer que se establezca automaticamente el hostname del cliente02. Para eso tenemos que añadir lo siguiente en el */etc/dhcp/dhcp.conf* en sustitucion de la reserva del cliente02
+
+```
+host uclient02{
+    hardware ethernet 08:00:27:34:21:be;
+    fixed-address 172.16.5.121;
+    option host-name "uclient02";
+};
+````
+
+Tenemos que reiniciar el servicio para que se apliquen los cambios con el comando:
+
+```
+service isc-dhcp-service restart
+````
+
+### Configuracion del cliente para configurar su nombre de equipo
+
+Tenemos que crear el fichero */etc/NetworkManager/dispatcher.d/99hostname* con el siguiente contenido:
+
+```bash
+#!/bin/sh
+
+### Script para configurar o nome do equipo
+### a partir dos datos enviados polo servidor DHCP
 
 
+case """"""""$2"""""""" in
 
+        up|dhcp4-change)
+                # Non facemos nada se o servidor
+                # non nos deu a variable adecuada
+                if [ -z """"""""$DHCP4_HOST_NAME"""""""" ]
+                then
+                        exit 0
+                else
+                        hostname $DHCP4_HOST_NAME
+                        echo $DHCP4_HOST_NAME > /etc/hostname
+                fi
+        ;;
+esac
+````
 
+Ahora debemos de cambiarle los permisos con el siguiente comando:
 
+```
+sudo chmod 755 /etc/NetworkManager/dispatcher.d/99hostname
+````
 
+Y volver a desconectar y conectar la red para que los cambios sean efectivos(se pueden hacer desde la interfaz grafica). 
 
+Para ver el nombre del cliente tenemos dos opciones o bien poner:
+
+```
+hostname
+````
+o bien poner:
+```
+cat /etc/hostname
+````
