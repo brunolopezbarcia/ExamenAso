@@ -125,7 +125,7 @@ Ahora debemos de agregar el rango de las ips del servidor DHCP:
 subnet 172.16.5.0 netmask 255.255.255.0 {
     range 172.16.5.100 172.16.5.119;
 }
-
+````
 En el fichero */etc/default/isc-dhcp-server.conf* y en el parametro *INTERFACESv4=* y poner el nombre de la interfaz de nuestra tarjeta de red en este caso *enp0s3*
 
 Y ahora debemos de reiniciar el servicio:
