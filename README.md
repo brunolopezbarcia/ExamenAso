@@ -48,19 +48,19 @@ apt-get install ldap-utils
 ldapsearch -x -b '' -s base objectClass=* namingcontext
 `````
 
-###### Consultar objecto de la rama dc=iescalquera,dc=local
+##### Consultar objecto de la rama dc=iescalquera,dc=local
 
-####### Sin autenticacion
+##### Sin autenticacion
 
 ```
 ldapsearch -x -b 'dc=iescalquera,dc=local'
-````
+```
 
-####### Con autenticacion
+#### Con autenticacion
 
 ```
 ldapsearch -Y EXTERNAL -H ldapi:// -b 'dc=iescalquera,dc=local'
-````
+```
 
 ##### Indicando el usuario y la contraseña
 
