@@ -56,7 +56,7 @@ ldapsearch -x -b '' -s base objectClass=* namingcontext
 ldapsearch -x -b 'dc=iescalquera,dc=local'
 ```
 
-#### Con autenticacion
+##### Con autenticacion
 
 ```
 ldapsearch -Y EXTERNAL -H ldapi:// -b 'dc=iescalquera,dc=local'
