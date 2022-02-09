@@ -195,3 +195,210 @@ Ahora tenemos que ejecutar el siguiente comando:
 ```
 ldapadd -D cn=admin,dc=iescalquera,dc=local -W -f ou_modif.lidf
 ````
+
+### Eliminar Unidades Organizativas
+
+Tenemos dos opciones o bien hacerlo con ldapadd o bien hacerlo con ldapdelete.
+
+Primero lo haremos con ldapadd. Tenemos que crear un fichero ldif con el siguiente contendio:
+
+```
+dn: ou=usuarios,dc=iescalquera,dc=local
+changetype: delete
+````
+
+Y despues ejecutar el comando:
+
+```
+ldapadd -D cn=admin,dc=iescalquera,dc=local -W -f ou_borrar.lidf
+````
+
+Ahora lo haremos con ldapdelete, para ello tambien debemos de crear  un fichero ldif, con el siguiente contenido:
+
+```
+dn: ou=usuarios,dc=iescalquera,dc=local
+dn: ou=profes,ou=usuarios,dc=iescalquera,dc=local
+````
+
+Una vez creado el fichero ldif debemos de ejecutar el comando:
+
+```
+ldapdelete -D cn=admin,dc=iescalquera,dc=local -W -f ou_borrar2.lidf
+````
+
+### Administracion de Grupos
+
+```
+dn: cn=exemplo-nombre-grupo, ou=exemplo-unidade-organizativa,dc=iescalquera,dc=local
+objectClass: posixGroup
+cn: exemplo-nombre-grupo
+gidNumber: N-gid-Mejor-mayor-de-9999
+````
+
+#### Crear Grupos
+
+Tenemos que crear el siguiente fichero:
+
+```
+dn: cn=g-usuarios,ou=grupos,dc=iescalquera,dc=local
+objectClass: posixGroup
+cn: g-usuarios
+gidNumber: 10000
+````
+
+Ahora tenemos que ejecutar el comando:
+
+```
+ldapadd -D cn=admin,dc=iescalquera,dc=local -W -f grupos.lidf
+````
+
+#### Modificar/eliminar grupos
+
+En cuanto a modificar y eliminar grupos la metodologia es igual que con las unidades organizativas.
+
+### Administracion de usuarios
+
+```
+dn: uid=usuario,ou=ou_exemplo,dc=exemplo,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: usuario
+sn: apelido
+givenName: Nome de pila
+cn: Nome Completo
+displayName: Nome para amosar
+uidNumber: 10000
+gidNumber: 10000
+userPassword: contrasinal
+gecos: Informacion sobre o usuario (Opcional. Sen tiles)
+loginShell: /bin/bash
+homeDirectory: /home/usuario
+mail: usuario@exemplo.local
+initials: UA
+
+#As seguintes entradas son opcionais, e serven para controlar a caducidade do contrasinal.
+shadowExpire: -1
+shadowFlag: 0
+shadowWarning: 7
+shadowMin: 8
+shadowMax: 999999
+shadowLastChange: 10877
+````
+
+#### Crear usuarios
+
+Tenemos que crear el siguiente fichero:
+
+```
+dn: uid=sol,ou=profes,ou=usuarios,dc=iescalquera,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: sol
+sn: Lúa
+cn: Profe - Sol Lúa
+givenName: Sol
+displayName: Profe - Sol Lúa
+uidNumber: 10000
+gidNumber: 10000
+userPassword: abc123.
+gecos: Profe - Sol Lua
+loginShell: /bin/bash
+homeDirectory: /home/sol
+mail: sol@iescalquera.local
+initials: SL
+shadowExpire: -1
+````
+
+Ahora tenemos que ejecutar el siguiente comando:
+
+```
+ldapadd -D cn=admin,dc=iescalquera,dc=local -W -f usuarios.ldif
+````
+
+#### Añadir a los usuarios a grupos secundarios
+
+Primero creamos el fichero para declarar los grupos a los que los vamos a unir.
+
+```
+dn: cn=g-profes,ou=grupos,dc=iescalquera,dc=local
+changetype: modify
+add: memberUid
+memberUid:sol
+
+dn: cn=g-dam1-profes,ou=grupos,dc=iescalquera,dc=local
+changetype: modify
+add: memberUid
+memberUid:sol
+
+dn: cn=g-dam2-profes,ou=grupos,dc=iescalquera,dc=local
+changetype: modify
+add: memberUid
+memberUid:sol
+````
+
+Ahora tenemos que ejecutar el siguiente comando:
+
+```
+ldapadd -D cn=admin,dc=iescalquera,dc=local -W -f grupos_secundarios.ldif
+````
+
+#### Eliminar/modificar usuarios
+
+Se haria igual que con los grupos y las unidades organizativas. Pero hay un pequeñp detalle que es que aunque eliminemos un usuario no significa que este se elemine de la entrada correspondiente en el grupo secundario, por lo tanto debemos de borrar la entrada memberUid del grupo.
+
+### Cambiar la contraseña de un usuario
+
+Tenemos que ejecutar el siguiente comando:
+
+```
+ldappasswd -D cn=admin,dc=iescalquera,dc=local -W uid=sol,ou=profes,ou=usuarios,dc=iescalquera,dc=local
+````
+En este caso la contraseña se pone automaticamente; en caso de que quisiesemos ponerla nosotros deberiamos de utilizar el parametro -S junto con el comando anterior; por lo que quedaria de la siguiente manera:
+
+```
+ldappasswd -D cn=admin,dc=iescalquera,dc=local -W uid=sol,ou=profes,ou=usuarios,dc=iescalquera,dc=local -S
+````
+
+O pot ultimo otra forma de cambiar la contraseña con un archivo ldif con el siguiente contenido:
+
+```
+dn: uid=sol,ou=profes,ou=usuarios,dc=iescalquera,dc=local
+changetype: modify
+replace: userPassword
+userPassword:novo contrasinal
+````
+
+Y ejecutarlo con ldapadd.
+
+
+### Ferramentas incluidas con el servidor ldap.
+
+- *slapindex* : Este comando pode ser moi útil en caso de apagados accidentais do servidor LDAP, xa que é posible que os índices usados para acceder á información do directorio se corrompan, o que pode producir erros na busca ou inserción de información no directorio ou incluso que o servidor LDAP non poida arrancar. A función do comando é rexenerar os índices a partir da información almacenada no directorio, creando así de novo as estruturas necesarias para que o servizo LDAP funcione correctamente.
+
+-  O comando debe executarse co mesmo usuario que executa o servidor LDAP (no caso de Debian/Ubuntu o usuario openldap), xa que os ficheiros de índices que este comando crea só poderán ser modificados polo usuario que executa o comando e executalo con outro usuario podería dar problemas de permisos ao arrancar o servidor LDAP.
+
+```
+root@dserver00:~# service slapd stop
+  [ ok ] Stopping OpenLDAP: slapd.
+root@dserver00:~# su - openldap -s /bin/bash
+openldap@dserver00:~$ /usr/sbin/slapindex -v
+  indexing id=00000001
+  indexing id=00000002
+  indexing id=00000014
+  indexing id=00000015
+  indexing id=00000016
+  indexing id=00000017
+  indexing id=00000018
+  indexing id=00000019
+  indexing id=0000001a
+  indexing id=00000024
+  indexing id=00000025
+openldap@dserver00:~$ exit
+  logout
+root@dserver00:~# service slapd start
+  [ ok ] Starting OpenLDAP: slapd.
+````
+
+
