@@ -20,7 +20,7 @@ Ahora debemos de reconfigurar el slapd; lo haremos con el siguiente comando:
 
 ```
 dpkg-reconfigure slapd
-````
+`````
 
 Nos aparacera una pantalla donde debemos de de decir que *no* queremos saltar la configuracion de ldap; en la siguiente pantalla debemos de introducir el nombre de dominio (en nuestro ejemplo es **iescalquera.local**). 
 Lugo nos saltara la pantalla del nombre de la organizacion (en nuestro ejemplo es **iescalquera**)
