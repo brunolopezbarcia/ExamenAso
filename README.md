@@ -159,7 +159,7 @@ host uclient02{
 Tenemos que reiniciar el servicio para que se apliquen los cambios con el comando:
 
 ```
-service isc-dhcp-service restart
+service isc-dhcp-server restart
 ````
 
 #### Configuracion cliente02
