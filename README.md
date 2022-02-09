@@ -1,6 +1,6 @@
 # Examen ASO
 
-### Instalacion y configuracion de ldap
+## Instalacion y configuracion de ldap
 
 Lo primero que tenemos que hacer es instalar el paquete necesario. Se haria con el siguiente comando:
 
@@ -103,3 +103,95 @@ ldapsearch -x -b 'dc=iescalquera,dc=local' objectClass=dcObject
 ldapsearch -x -b 'dc=iescalquera,dc=local' cn=admin
 ````
 
+## Administracion de unidades organizativas, usuarios y grupos en LDAP con ldap-utils
+
+### Administracion de Unidades Organizativas(OU)
+
+#### ModeloOu.ldif
+
+```
+dn: ou=exemplo-unidade-organizativa,dc=exemplo,dc=local
+objectClass: organizationalUnit
+ou= exemplo-unidade-organizativa
+````
+
+#### Crear unidades organizativas
+
+Primero tenemos que crear el fichero ldif con el que importaremos las OU. 
+
+El fichero es el siguiente:
+
+```
+#OU usuarios
+dn: ou=usuarios,dc=iescalquera,dc=local
+objectClass: organizationalUnit
+ou: usuarios
+description: OU para almacenar usuarios
+
+#OU profes
+dn: ou=profes,ou=usuarios,dc=iescalquera,dc=local
+objectClass: organizationalUnit
+ou: profe
+street: Rua Borrar n 3 (non usar tildes)
+````
+
+Ahora tenemos que ejecutar el comando:
+
+```
+ldapadd -D cn=admin,dc=iescalquera,dc=local -W -f ou.ldif
+````
+
+Como nos equivocamos al poner el nombre de la ou profes en la parte de ou aparece de la siguiente manera:
+
+```
+ldapsearch -x -b ou=usuarios,dc=iescalquera,dc=local
+# extended LDIF
+#
+# LDAPv3
+# base <ou=usuarios,dc=iescalquera,dc=local> with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
+
+# usuarios, iescalquera.local
+dn: ou=usuarios,dc=iescalquera,dc=local
+objectClass: organizationalUnit
+ou: usuarios
+description: OU para almacenar usuarios.
+
+# profes, usuarios, iescalquera.local
+dn: ou=profes,ou=usuarios,dc=iescalquera,dc=local
+objectClass: organizationalUnit
+ou: profe
+ou: profes
+street: Rua Borrar n 3 (non usar tiles)
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 3
+# numEntries: 2
+````
+
+### Modificar Unidades Organizativas
+
+Primero tenemos que crear el fichero que en el que indicamos que es lo que vamos a modificar de la OU.
+
+```
+dn: ou=profes,ou=usuarios,dc=iescalquera,dc=local
+changetype: modify
+replace: ou
+ou: profes
+-
+add: description
+description: OU para almacenar usuarios profes.
+-
+delete: street
+````
+
+Ahora tenemos que ejecutar el siguiente comando:
+
+```
+ldapadd -D cn=admin,dc=iescalquera,dc=local -W -f ou_modif.lidf
+````
