@@ -402,3 +402,78 @@ root@dserver00:~# service slapd start
 ````
 
 
+## Configuracion Cliente LDAP
+
+### Instalar los paquetes necesarios
+
+Lo primero que debemos de hacer es instalar los paquetes necesarios para que nos funcione, en este caso instalaremos el siguiente paquete:
+
+```
+sudo apt-get install libpam-ldapd
+````
+
+Esto nos abrira un sistema de configuracion donde debemos de hacer los siguientes pasos:
+
+1. Tendremos que declarar la direccion ip del servidor de ldap. Por el momento haremos una conexion no segura al mismo. Lo que debemos de escribir es lo siguiente:
+  ```
+  ldap://172.16.5.10/
+  ```
+Y le daremos al boton de aceptar. 
+2. Una vez añadida la direccion ip del servidor debemos de poner lo siguiente, que es el nombre de dominio del servidor:
+  ```
+  dc=iescalquera,dc=local
+  ```
+Una vez hecho esto pasaremos a la siguiente pantalla dandole a aceptar.
+3. En esta pantalla debemo de seleccionar las opciones group, passwd y shadow. Esto se hace poniendose sobre la opcion y dandole al espacio para que aparezca un asterisco. Una vez hecho esto le daremos a aceptar y se terminara la configuracion.
+
+4. Para comprobar que funcione probaremos los siguientes comandos:
+
+  ```
+  getent passwd
+  getent group
+  getent shadow
+  ```
+
+5. Tambien ahoremos el siguiente comando y miraremos que este todo con asterisco (menos los de crear el directorio personal si no queremos que se cree en local)
+  ```
+  sudo pam-auth-update
+  ````
+
+Si al final de todo aparecen los grupos y usuarios de nuestro dominio todo funciona correctamente; si no debemos de volver a configurar. Para poder volver a configurarlo debemos de utilizar este comando:
+  ```
+  sudo dpkg-reconfigure nslcd
+  ````
+
+Y reiniciar el servicio con el comando:
+
+```
+sudo service nslcd restart
+sudo service nscd restart
+````
+
+#### Comprobar el funcionamiento del cliente
+
+Pata comprobar si un cliente funciona lo podemos hacer de dos maneras; o bien con el comando getent o bien conectadonos con un usuarios del servidor ldap.
+
+#### Con el comando getent
+
+Lo que debemos de hacer es lo siguiente:
+
+```
+getent passwd
+getent group
+getent shadow
+````
+
+Debemos de poner uno de esos tres comandos y si al final de todo aparecen los grupos y usuarios de nuestro dominio todo funciona correctamente
+
+
+#### Conectandonos con un usuario
+
+Tambien podemos comprobar si funciona conectandonos con un usuario del servidor ldap; en este caso lo haremos con sol.
+
+```
+su - sol
+````
+
+Si nos deja iniciar sesion funciona perfectamente. Una vez conectado tiene los mismo comandos que un usuarios local.
