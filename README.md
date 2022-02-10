@@ -876,3 +876,536 @@ su - sol
 ````
 
 Si inicia sesion es que nos funciona.
+
+
+## Creacion e configuracion del esqueleto de la estructura de carpetas.
+
+Lo primero que debemos de hacer es añadir un nuevo disco a la maquina virtual desde el VB.
+
+Una vez hayamos añadido el disco debemos de iniciar la maquina virtual y poner estos comandos:
+
+```
+ls /dev/sd*
+````
+
+Esto sirve para comprobar que el disco este añadido.
+
+Ahora tenemos que particionar el disco, primero miraremos si esta particionado con el comando *fdisk -l* que permite ver los discos y sus particiones.
+
+Para particionarlo haremos lo siguiente:
+
+´´´
+cfdisk /dev/sdb
+````
+En donde pone elegir la tabla de particiones elegimos la opcion de *gpt* que es soportada por casi todos los sistemas operativos.
+
+Ahora debemos de darle a la opcion de nueva y pondremos en el tamaño de particion 5G, una vez tengamos esta particion creada le nos pondremos sobre donde pone espacio libre y le daremos a nueva para crear otra particion que tambien tendra 5G de tamaño y le daremos al boton de escribir para que cree las particiones, y le indicaremos que si queremos escribir la tabla de particiones.
+
+
+Una vez hecho esto comprobamos el particionado del disco con el siguiente comando:
+
+```
+fdisk -l
+o con
+ls -l /dev/sd*
+````
+
+Ahora le daremos el formato y le pondremos la etiqueta con el siguiente comando:
+
+```
+mkfs.ext4 -L Usuarios /dev/sdb1
+````
+
+Y haremos lo mismo para la segunda particion
+
+```
+mkfs.ext4 -L Comun /dev/sdb2
+````
+
+### Solo nos queda montar las particiones.
+
+Primero Tenemos que crear las carpetas donde se van a montar
+
+```
+mkdir /home/iescalquera
+mkdir /comun
+````
+
+Esto lo haremos en el */etc/fstab* donde añadiremos los puntos de montaje que tendran la siguiente forma:
+
+
+```
+/dev/sdb1 /home/iescalquera ext4 default 0 0
+/dev/sdb2 /comun ext4 default 0 0
+````
+
+Una vez añadido esos parametros al archivo debemos de ejecutar el mismo comando para montar las carpetas:
+
+```
+mount -a
+````
+
+Y utilizaremos el comando ```mount o con df -h ```` para ver si se han montado correctamente.
+
+## Crear Esqueleto
+
+### Scripts para crear el esqueleto.
+
+Primero debemos de crear la carpeta donde estaran localizados los scripts.
+
+```
+mkdir Scripts
+cd Scripts
+````
+
+Tenemos que crear un archivo con los cursos que queremos crear.
+
+Nosotros le llamaremos f00_cursos.txt
+
+El contenido del archivo debe de ser el siguiente:
+```
+dam1
+dam2
+````
+
+Debemos de crear el script con las variables globales, le llamaremos 00_variables.sh
+
+El contenido del archivo es el siguiente:
+
+```bash
+#!/bin/bash
+
+#Variables
+DIR_HOME_LDAP=/home/iescalquera
+DIR_COMUN=/comun
+
+#Ahora debemos de exportar las variables.
+
+export DIR_HOME_LDAP
+export DIR_COMUN
+```
+
+Ahora crearemos el script para crear el esqueleto, le llamaremos 01_crear_esqueleto.sh
+
+El contenido sera el siguiente:
+
+```bash
+
+#!/bin/bash
+
+#Primero llamaremos al script de las variables
+
+. ./00_variables.sh
+
+#Creamos el esqueleto de los profes:
+
+test -d $DIR_HOME_LDAP/profes || mkdir -p $DIR_HOME_LDAP/profes
+
+#Crear el esqueleto de los alumnos y los cursos
+
+#Cursos
+
+#Debemos primero de leer el archivo cursos
+
+for curso in $(cat f00_cursos.txt); do
+  test -d $DIR_HOME_LDAP/alumnos/$curso || mkdir -p $DIR_HOME_LDAP/alumnos/$curso
+  test -d $DIR_COMUN/$curso || mkdir -p $DIR_COMUN/$curso
+done
+
+test -d $DIR_COMUN/departamentos || mkdir -p $DIR_COMUN/departamentos
+````
+
+Ahora debemos de ejecutar el script:
+
+```
+bash ./01_crear_esqueleto.sh
+````
+
+### Crear permisos del esqueleto.
+
+Para poder realizar esto haremos un script que le llamaremos 02_permisos_esqueleto.sh
+
+El contenido sera el siguiente:
+
+```bash
+
+#!/bin/bash
+
+#Primero llamaremos al script de las variables
+
+. ./00_variables.sh
+
+#Cartafol /home/iescalquera
+
+chown root:g-usuarios $DIR_HOME_LDAP
+chmod 750 $DIR_HOME_LDAP
+
+#Cartafol /home/iescalquera/profes
+
+chown root:g-profes $DIR_HOME_LDAP/profes
+chmod 750 $DIR_HOME_LDAP/profes
+
+#Cartafol /home/iescalquera/alumnos
+
+chown root:g-usuarios $DIR_HOME_LDAP/alumnos
+chmod 750 $DIR_HOME_LDAP/alumnos
+
+#Cartafoles de los cursos
+
+for curso in $(cat f00_cursos.txt); do
+  chown root:g-usuarios $DIR_HOME_LDAP/alumnos/$curso
+  chmod 750 $DIR_HOME_LDAP/alumnos/$curso
+done
+
+#Cartafol comun
+chown root:g-usuarios $DIR_COMUN
+chmod 750 $DIR_COMUN
+
+#Cartafoles comun/dam1
+chown root:g-dam1-profes $DIR_COMUN/dam1
+chmod 775 $DIR_COMUN/dam1
+
+#Cartafoles comun/dam2
+chown root:g-dam2-profes $DIR_COMUN/dam2
+chmod 775 $DIR_COMUN/dam2
+
+#Cartafoles comun/departamentos
+chown root:g-profes $DIR_COMUN/departamentos
+chmod 775 $DIR_COMUN/departamentos
+````
+
+Ahora debemos de ejecutar el script:
+
+```
+bash ./02_ajustar_permisos_esqueleto.sh
+````
+
+### Creacion de las carpertas personales de los usuarios(home)
+
+Todos los usuarios deben de tener la carpeta personal en /home/iescalquera
+
+Tenemos que traer el skel de un cliente debido a que es un ubuntu; lo haremos con el siguiente comando:
+
+```
+scp -r uadmin@uclient01:/etc/skel ./
+````
+
+Una vez la tengamos en dserver00 la renombraremos con el comando:
+
+```
+mv skel skel_ubuntu
+````
+
+
+
+Para eso crearemos un script que se llamara 03_crear_carpertas_personales_ajustar_permisos.sh
+
+```bash
+
+#!/bin/bash
+
+#Primero llamaremos al script de las variables globales
+
+. ./00_variables.sh
+
+#Volcamos todos los usuarios
+
+getent passwd> usuarios.txt
+
+#Extraemos los campos que nos interesan:
+
+for USUARIO in $(awk -F':' '$3>=10000 $$ $3<60000 {print $1:$6}' usuarios.txt)
+do
+
+NOMBRE_USUARIO=$(echo $USUARIO | awk -F':' '{print $1}')
+HOME_USUARIO=$(echo $USUARIO | awk -F':' '{print $2}')
+GRUPO_GLOBAL_USUARIO=$(echo $HOME_USUARIO | awk -F'/' '{print $4}')
+
+#Creamos la carpeta personal de cada usuario
+
+test -d $HOME_USUARIO || mkdir -p $HOME_USUARIO
+
+#Copiamos dentro de cada carpeta el contenido del skel
+
+cp skel_ubuntu/\. $HOME_USUARIO
+
+if [$GRUPO_GLOBAL_USUARIO = "profes"]
+then 
+  chown -R $NOME_USUARIO:g-usuario $HOME_USUARIO
+  chmod -R 700 $HOME_USUARIO
+else
+#Si el grupo es alumno
+  chown -R $NOME_USUARIO:g-usuario $HOME_USUARIO
+  chmod -R 700 $HOME_USUARIO
+fi
+done
+
+rm usuarios.txt
+````
+
+Ahora debemos de ejecutar el script:
+
+```
+bash ./03_crear_carpertas_personales_ajustar_permisos.sh
+````
+
+Y comprobamos que se ejecuto bien con un tree de */home/iescalquera*.
+
+Si aparte queremos ver los permisos haremos:
+
+```
+tree -ugm /home/iescalquera
+````
+
+Ahora podemos iniciar sesion en el servidor y comprobar que entra en la carpeta del usuario.
+
+
+## Instalacion del servicio NFS. Exportaciones
+
+Lo primero que tenemos que hacer es instalar el paquete:
+
+```
+apt-get install nfs-kernel-server
+````
+
+Una vez hayamos creado el debemos de añadir en el fichero **/etc/exports** lo siguiente:
+
+```
+/home/iescalquera 172.16.5.0/255.255.255.0(rw)
+/comun            172.16.5.0/255.255.255.0(rw)
+````
+
+Y tenemos que reiniciar el servicio
+
+```
+service nfs-kernel-server restart
+````
+
+Y comprobamos que se hayan exportado.
+
+```
+exportfs -v
+````
+
+##  Configuracion del cliente NFS
+
+Primero debemos de instalar el paquete:
+
+```
+sudo apt-get install nfs-common
+````
+
+Ahora debemos de acceder al archivo de */etc/fstab* y añadir las carpetas compartidas en red. Pero primero debemos de crear las carpetas en la maquina real.
+
+```
+sudo mkdir /home/iescalquera
+sudo mkdir /media/comun
+````
+
+En el archivo */etc/fstab* debemos añadir estas lineas:
+
+```
+dserver00:/home/iescalquera /home/iescalquera nfs default,_netdev 0 0
+dserver00:/comun /media/comun nfs default,_netdev 0 0
+````
+
+Y realizaremos un ```sudo mount -a```` para que los cambios surjan efecto. 
+
+### Iniciar sesion en el modo grafico.
+
+Para poder iniciar sesion en el modo grafico debemos de modificar el siguiente archivo:
+
+```
+sudo nano /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+````
+
+Y añadir la siguiente linea:
+
+```
+greeter-show-manual-login=true
+````
+
+Y tendremos que reiniciar el servicio con el comando:
+
+```
+sudo service lightdm restart
+````
+
+### Agregar accesos directos a las carpetas montadas por NFS.
+
+Crearemos un script cuyo nombre sera **sudo nano /opt/engadir_marcadores.sh**
+
+```bash
+#!/bin/bash
+#Comprobamos si el usuario que inicia sesion es profe y no tiene creado un marcador.
+
+if (groups ${u} | grep profes) && !(cat ~/.config/gtk-3.0/bookmarks | grep Alumnos)
+then
+#Añadimos el favorito al fichero pero no lo machacamos por si tiene otros marcadores.
+echo file:///home/iescalquera/alumnos Alumnos>>~/.config/gtk-3.0/bookmarks
+fi
+```
+
+Este script tiene que ejecutarse al iniciar la maquina por lo que añadiremos una linea en el **/etc/profile** que haga una llamada a este script.
+
+```
+sh /opt/engadir_marcadores.sh
+````
+
+
+## Cuotas de disco.
+
+Primero tenemos que añadir el paquete:
+
+```
+apt-get install quota
+````
+
+Luego debemos de añadir los usuarios y grupo quota a donde queremos aplicar las quotas. Esto se hace en el **/etc/fstab**
+
+```
+UUID=f7d9a85b-5847-449a-9f98-29dfecf4239e  /home/iescalquera   ext4   defaults,usrquota,grpquota   0 0
+
+#/dev/sdb2: LABEL="Comun" UUID="726f54f6-960b-4ad0-9ec2-35eace42290a" 
+/dev/sdb2		                   /comun 	       ext4   defaults,usrquota,grpquota   0 0
+````
+
+Ahora tenemos que utilizar el siguiente comando para hacer efectivos los cambios:
+
+```
+mount -o remount /home/iescalquera
+mount -o remount /comun
+````
+
+
+Ahora tenemos que utilizar el siguiente comando para comprobar el estado de las quotas(si da error la primera vez se vuelve a ejecutar para que no de error, si en la segunda ejecuccion hay algun error hay algun problema)
+
+```
+quotacheck -avug
+````
+
+El comando anterior se debe de ejecutar con las quotas desactivadas para lo que vamos a utilizar el comando:
+
+```
+quotaoff -avug
+````
+
+Y ahora podremos encender las quotas con el comando:
+
+```
+quotaon -av
+````
+
+### Establecer quotas a los usuarios.
+
+Añadiremos una entrada de quotas para los profesores y para los alumnos. Para ello es necesario que exista el usuario.
+
+```
+useradd profe -M -N -u 1001
+useradd alumno  -M -N -u 1002
+````
+
+Y bloquearemos la cuenta:
+
+```
+passwd -l profe
+passwd -l alumno
+````
+
+Ahora estableceremos las quotas:
+
+```
+setquota -u profe 250000 300000 0 0 /home/iescalquera
+setquota -u alumno 150000 200000 0 0 /home/iescalquera
+````
+
+Para comprobar los consumos de quota se puede utilizar *quota* y *repquota*
+
+```
+quota profe
+````
+
+```
+repquota -a
+````
+
+Ahora crearemos un script para asignar las quotas a los usuarios.
+
+```bash
+#!/bin/bash
+
+#Script quota usuarios
+
+getent passwd > usuarios.txt
+
+for usuario in $(awk -F':' '$3>=10000 && $3<60000 {print $1}' usuarios.txt)
+do
+
+if (groups $usuario | grep profes)
+then
+  edquota -p  profe $usuario
+else
+  edquota -p alumno $usuario
+fi
+done
+
+rm usuarios.txt
+````
+
+Ahora ejecutamos el script:
+
+```
+bash 10_cuotas_usuario.sh
+````
+
+Y comprobamos que funcionase:
+
+```
+repquota -a
+````
+
+### Las quotas en los equipos clientes
+
+Lo primero que tenemos que hacer es instalar el paquete:
+
+```
+sudo apt-get install quota
+````
+
+Ahora para que funcione debemos de ejecutar el siguiente comando:
+
+```
+systemctl start quotarpc
+````
+
+Ahora comprobamos si funciona conectandonos con un usuario y ejecutando el comando
+
+```
+quota
+````
+
+Para crear archivos y ver si aumenta la quota el comando es:
+
+```
+dd if=/dev/zero of=fichero50MB bs=50M count=1
+````
+
+Para editar el periodo de gracia es:
+
+```
+edquota -Tu noe
+````
+
+Para quitar las quotas a un usuario usaremos el comando:
+
+```
+setquota -u USUARIO 0 0 0 0 /home/iescalquera
+````
+
+
+
+
+
+
+
+
