@@ -479,3 +479,167 @@ su - sol
 ````
 
 Si nos deja iniciar sesion funciona perfectamente. Una vez conectado tiene los mismo comandos que un usuarios local.
+
+
+## Herramientas para la administracion del LDAP: ldapscripts, LDAP Accoutn Manager y JXplorer
+
+### Administracion mediante scripts
+
+Para esto debemos de instalar el siguiente paquete en dserver00:
+
+```
+apt-get install ldapscripts
+````
+
+A continuacion debemos de modificar unos parametros en el archivo **/etc/ldapscripts/ldapscripts.conf**:
+
+```
+SERVER="ldap://localhost"
+BINDPWDFILE="/etc/ldapscripts/ldapscripts.passwd"
+SUFFIX="dc=iescalquera,dc=local"
+GSUFFIX="ou=grupos"
+USUFFIX="ou=usuarios"
+MSUFFIX="ou=maquinas"
+...
+BINDDN="cn=admin,dc=iescalquera,dc=local"
+BINDPWDFILE="/etc/ldapscripts/ldapscripts.passwd"
+...
+CREATEHOMES="yes"
+````
+
+Para terminar la configuracion del paquete debemos de actualizar la contraseña del administrador para este paquete con el siguiente comando:
+
+```
+sh -c "echo -n abc123." > /etc/ldapscripts/ldapscripts.passwd
+````
+
+Ahora tenemos muchas opciones como puede ser *ldapaddgroup, ldapadduser....*
+
+Vamos a probar algunos comandos:
+
+  - Añadir el grupo g-alum
+    ```
+    ldapaddgroup g-alum
+    ````
+  - Ahora crearemos un usuario que añadiremos a un grupo(debemos de tener creados los grupos grupo1-ficticio y grupo2-ficticio con anterioridad)
+    ```
+    ldapadduser pepe grupo1-ficticio
+    ````
+  - Podemos cambiarle la contraseña con:
+    ```
+    ldapsetpasswd pepe
+    ````
+  - Y podemo añadirlo a mas grupos con el comando:
+    ```
+    ldapaddusertogroup pepe grupo2-ficticio
+    ````
+
+Ahora veremos como eliminar el usuario pepe y los grupos.
+  
+  - Eliminar al usuario del grupo al que lo añadimos:
+    ```
+    ldapdeleteusertogroup pepe grupo2-ficticio
+    ````
+  - Eliminar al usuario:
+    ```
+    ldapdeleteuser pepe
+    ````
+  - Eliminar el grupo1-ficticio
+    ```
+    ldapdeletegroup grupo1-ficticio
+    ````	
+
+### Instalacion y uso del LDAP Account Manager(LAM)
+
+Lo primero que debemos de hacer es instalar el paquete correspondiente:
+
+```
+apt-get install ldap-account-manager
+````
+
+Una vez instalado este paquete como se instala el servidor apache instalaremos una serie de paquete para su correcto funcionamiento.
+
+```
+apt-get install php-xml
+apt-get install php-zip
+````
+
+Una vez instalados este paquete reiniciamos el servicio de apache:
+
+```
+service apache2 restart
+````
+
+### Configuracion de LAM
+
+Como estamos en una maquina virtual lo que debemos de hacer es permitir un reenvio de puertos desde el puerto 80 de la maquina virtual a un puerto de la maquina real en nuestro caso el 8080. Para poder acceder a la interfaz del LAM debemos de poner **http://192.168.32.12:8080/lam**.
+
+1. Una vez conectados presionamos en LAM configuration 
+2. Una vez en esta ventana entraremos en la opcion *Edit Server profiles*
+3. Aqui debemos de modificar la contraseña de la utilidad, que por defecto es lam; en este caso la cambiaremos a *abc123.*
+4. Ahora debemos de iniciar sesion e ir a la pestaña general. Donde pone **Tree sufix** debemos de poner **dc=iescalquera,dc=local**. En la parte de **default language** pondremos el idioma español y tambien debemos de poner en la parte de **List of valid usuers** tendremos que poner **cn=admin,dc=iescalquera,dc=local**
+5. Tendremos que guardar los cambios para que surjan efecto.
+
+Ahora debemos de movernos a la opcion de **Tipos de cuentas** y dentro del apartado **Tipos de cuentas activos**, borraremos la cuenta de **Dominios de Samba**. Dentro de esta pestaña debemos de modificar los tipos de cuenta usuarios, grupos y equipos, poniendole los siguientes Sufijos de LDAP.
+
+```
+Usuarios -> ou=usuarios,dc=iescalquera,dc=local
+Grupos -> ou=grupos,dc=iescalquera,dc=local
+Equipos -> ou=maquinas,dc=iescalquera,dc=local
+````
+
+Esta ultima en caso de no estar añadida la añadimos.
+
+
+Ahora el la pestaña modulos debemos de modificar los modulos seleccionados para cada tipo de cuenta:
+
+Los modulos deben de ser los siguientes:
+- En el caso de usuarios:
+  -Personal(inetOrgPerson)(*)
+  -Unix(posixAccount)
+  -Sombra(shadowAccount)
+*En caso de que haya mas modulos los eliminamos*
+
+- En el caso de grupos:
+  -Unix(posixAccount)
+*En caso de que haya mas modulos los eliminamos*
+
+- En el caso de usuarios:
+  -Cuenta(account)(*)
+  -Unix(posixAccount)
+*En caso de que haya mas modulos los eliminamos*
+
+Ahora le damos al boton de guardar para que los cambios surjan efecto.
+
+
+#### Crear OUs en LAM
+
+Ahora vamos a crear la OU dam2.
+
+Debemos de abrir la vista de arbol y en la parte de ou=alumno abrimos el desplegable y le damos a crear nueva entrada aqui. Selecionamos OU generica y le indicamos el nombre y le damos a guardar.
+
+##### Crear Grupos en LAM
+
+En la pestaña de grupos le damos a nuevo grupo y donde pone nombre de grupo ponemos g-dam1-alum y le damos a guardar(no es necesario poner el nombre del grupo debido a que LAM pone automaticamente el primer GID libre.)
+
+#### Crear Usuarios en LAM
+
+###### Crear Usuarios con CSV
+
+En usuarios le damos en File Upload y nos enseña los modulos que va a tener en cuenta le damos a aceptar y descargamos el modelo csv de ejemplo lo abrimos con una hoja de calculo y cambiamos los datos para los datos que nosotros queremos. Una vez cambiados lo guardamos y lo subimos a lam, en este momento LAM chequeara si todo el contenido esta bien lo sube. Y asi `podemos ver al usuarios creadom con el uid(no se indico en el archivo), tambien lo vemos dentro de su ou y dentro de su grupo secundario
+
+
+### JXplorer
+
+Jxplorer es una herramienta garfica de administracion de ficheros que nos permite conectarnos al servidor ldap.
+
+Debemos de instalar esta herramienta en uno de los clientes en nuestro caso uclient01. Con el siguiente comando:
+
+```
+sudo apt-get install jxplorer
+````
+
+Una vez instalado le debemos de dar a conectar, donde debemos de introducir la direccion ip del servidor, en la parte de level debemos de añadir *dc=iescalquera,dc=local* y en la parte de user DN debemos de añadir *cn=admin,dc=iescalquera,dc=local* y en la password la contraseña que le establecimos al usuario admin.
+
+Una vez conectados nos aparecera todo el servidor en forma de arbol donde haciendo doble click sobre un objeto podemos modificar sus valores.
+
