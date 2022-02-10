@@ -419,11 +419,13 @@ Esto nos abrira un sistema de configuracion donde debemos de hacer los siguiente
   ldap://172.16.5.10/
   ````
 Y le daremos al boton de aceptar. 
+
 2. Una vez añadida la direccion ip del servidor debemos de poner lo siguiente, que es el nombre de dominio del servidor:
   ```
   dc=iescalquera,dc=local
   ````
 Una vez hecho esto pasaremos a la siguiente pantalla dandole a aceptar.
+
 3. En esta pantalla debemo de seleccionar las opciones group, passwd y shadow. Esto se hace poniendose sobre la opcion y dandole al espacio para que aparezca un asterisco. Una vez hecho esto le daremos a aceptar y se terminara la configuracion.
 
 4. Para comprobar que funcione probaremos los siguientes comandos:
