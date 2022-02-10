@@ -643,3 +643,236 @@ Una vez instalado le debemos de dar a conectar, donde debemos de introducir la d
 
 Una vez conectados nos aparecera todo el servidor en forma de arbol donde haciendo doble click sobre un objeto podemos modificar sus valores.
 
+## Autenticacion segura contra el LDAP. Uso de TLS/SSL: LDAPS
+
+### Creacion de la Autirdad de Certificacion.
+
+En dserver00, primero crearemos los directiorios para almacenar los cerficados y los archivos relacionados:
+
+```
+mkdir /etc/ssl/CA
+mkdir /etc/ssl/newcerts
+````
+
+Ahora crearemos dos fichero que la CA precisara para mantener un numero de serie.
+```
+touch /etc/ssl/CA/index.txt
+sh -c "echo '01'" > /etc/ssl/CA/serial
+````
+
+En el fichero **/etc/ssl/openssl.conf** modificaremos los siguientes parametros:
+```
+dir = /etc/ssl # Where everything is kept
+...
+database = $dir/CA/index.txt # database index file.
+...
+certificate = $dir/certs/cacert.pem # The CA certificate
+serial = $dir/CA/serial # The current serial number
+````
+
+Creamos el certificado raiz.
+
+```
+openssl req -new -x509 -extensions v3_ca -keyout cakey.pem -out cacert.pem -days 3650
+````
+
+Y poner los siguientes datos. 
+
+```
+enerating a 1024 bit RSA private key
+......++++++
+........++++++
+unable to write 'random state'
+writing new private key to 'cakey.pem'
+Enter PEM pass phrase:
+Verifying - Enter PEM pass phrase:
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:ES
+State or Province Name (full name) [Some-State]:Galicia
+Locality Name (eg, city) []:
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:IES Calquera
+Organizational Unit Name (eg, section) []:
+Common Name (eg, YOUR name) []:dserver00.iescalquera.local
+Email Address []:
+````
+
+Ahora movemos en los directorios de la CA tanto la llave privada como el certificado creado:
+
+```
+mv cakey.pem /etc/ssl/private/
+mv cacert.pem /etc/ssl/certs/
+````
+
+### Generar la solicitud de firmado del certificado
+
+Lo primero que tenemos que hacer es ejecutar este comando. 
+
+```
+openssl genrsa -des3 -out server.key 1024
+````
+
+Ahora ejecutaremos este comando:
+
+```
+openssl rsa -in server.key -out server.key.insecure
+````
+
+Y guardamos en server.key la clave sin contraseña.
+
+```
+mv server.key server.key.secure
+mv server.key.insecure server.key
+````
+
+Y por ultimo creamos el CSR:
+
+```
+openssl req -new -key server.key -out server.csr
+````
+
+Donde pondremos los siguientes datos:
+
+```
+Country Name (2 letter code) [AU]:ES
+State or Province Name (full name) [Some-State]:Galicia
+Locality Name (eg, city) []:
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:IES Calquera
+Organizational Unit Name (eg, section) []:
+Common Name (eg, YOUR name) []:dserver00.iescalquera.local
+Email Address []:
+Please enter the following 'extra' attributes
+Xenerar a solicitude de firma do certificado (CSR)
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:
+````
+
+### Generar certificado apartir del CSR
+
+Lo primero que tenemos que hacer es ejecutar este comando:
+
+```
+openssl ca -in server.csr -config /etc/ssl/openssl.cnf
+````
+
+Y debemos de añadir nuestra clave que usamos al crear la CA y lsito ya tenemos nuestro certificado:
+
+```
+-----BEGIN CERTIFICATE-----
+MIICpzCCAhCgAwIBAgIBATANBgkqhkiG9w0BAQUFADBbMQswCQYDVQQGEwJFUzEQ
+MA4GA1UECBMHR2FsaWNpYTEVMBMGA1UEChMMSUVTIGNhbHF1ZXJhMSMwIQYDVQQD
+ExpzZXJ2ZXIwMC5pZXNjYWxxdWVyYS5sb2NhbDAeFw0xMDAzMDQyMzI1MjNaFw0x
+MTAzMDQyMzI1MjNaMFsxCzAJBgNVBAYTAkVTMRAwDgYDVQQIEwdHYWxpY2lhMRUw
+EwYDVQQKEwxJRVMgY2FscXVlcmExIzAhBgNVBAMTGnNlcnZlcjAwLmllc2NhbHF1
+ZXJhLmxvY2FsMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC/QWqoi12reBRA
+/3p6+KyWTAoN3XqLU8VaNhpAAP4LTRuuzeeCKxkPyj2QZk+rWehmqkqbwX6Zdrqi
+BSfeKuoRokTV7e2bbMJmaomEbvez5bwr7sDSXl2UyFhVyJWtQBkI8m2pkqjWt9Fn
+2OotV+c43HNncXN3/mGoVwpE7OMivwIDAQABo3sweTAJBgNVHRMEAjAAMCwGCWCG
+SAGG+EIBDQQfFh1PcGVuU1NMIEdlbmVyYXRlZCBDZXJ0aWZpY2F0ZTAdBgNVHQ4E
+FgQU3/xzDTawr9pH9+NX+UH9/4ivF64wHwYDVR0jBBgwFoAUAciyrRu3hkU+yjfM
+wZWOqCLD0ZswDQYJKoZIhvcNAQEFBQADgYEAVHDWexRWbz6nPWVA+x/4KaXA9KaE
+atZ1cu2Mep+29duZyAFcQEf4pivXCallmkmbAhurpUH61SLFHOb7YHl71EPLvru0
+U3kDx48wSDGqBzdCKWhoh1SBrFryxlovEredZ44q/1AxldJ8py9r77e2kqJ7u+TC
+6v0/CnJRUYvWZh0=
+-----END CERTIFICATE-----
+````
+
+Todo esto lo copiamos en un archivo que se llame server.crt
+
+Y luego ejecutaremos este comando:
+
+```
+cp server.crt /etc/ssl/cert
+cp server.key /etc/ssl/private
+````
+
+#### Configuracion del servidor LDAP
+
+Añadimos si no existe el grupo local **ssl-cert**
+
+```
+#Se non existe o grupo local ssl-cert, creámolo.
+#addgroup ssl-cert,
+adduser openldap ssl-cert
+chmod 750 /etc/ssl/private
+chgrp ssl-cert /etc/ssl/private
+chmod 640 /etc/ssl/private/server.key
+chgrp ssl-cert /etc/ssl/private/server.key
+````
+
+Y tenemos que reiniciar el servicio ldap:
+
+```
+/etc/init.d/slapd restart
+````
+
+Ahora utilizaremos este comando:
+
+```
+ldapmodify -Y EXTERNAL -H ldapi://
+````
+Pegaremos los siguientes datos:
+
+```
+dn: cn=config
+add: olcTLSCACertificateFile
+olcTLSCACertificateFile: /etc/ssl/certs/cacert.pem
+-
+add: olcTLSCertificateFile
+olcTLSCertificateFile: /etc/ssl/certs/server.crt
+-
+add: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: /etc/ssl/private/server.key
+````
+Utilizaremos Ctrl+D para procesar los datos introducidos.
+
+Ahora tenemos que modificar el ficher **/etc/default/sldap** y establecer en el paramentro *SLAPD_SERVICES* el siguiente valor:
+
+```
+SLAPD_SERVICES="ldap:/// ldaps:/// ldapi:///"
+````
+
+### Configuracion del cliente LDAP
+
+Utilizaremos el comando:
+
+```
+sudo dpkg-reconfigure nslcd
+````
+
+Y modificaremos la direccion ip del servidor poniendole lo siguiente:
+
+```
+ldaps://172.16.5.10/
+````
+
+El resto lo dejamos como esta. Excepto en la pantalla de que te pregunte sobre conseguir el certificado que seleccionaremos permitir.
+
+Se reiniciara el servicio automaticamente pero podemos forzarlo con:
+
+```
+sudo service nscd restart
+sudo service nslcd restart
+````
+
+Comprobamos que nos funciona o bien con el comando getent
+
+```
+getent passwd
+````
+Si aparecen los usuarios del dominio es que funciona
+
+O bien iniciando sesion con un usuario del dominio:
+
+```
+su - sol
+````
+
+Si inicia sesion es que nos funciona.
