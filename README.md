@@ -595,18 +595,18 @@ Ahora el la pestaña modulos debemos de modificar los modulos seleccionados para
 
 Los modulos deben de ser los siguientes:
 - En el caso de usuarios:
-  -Personal(inetOrgPerson)(*)
-  -Unix(posixAccount)
-  -Sombra(shadowAccount)
+  - Personal(inetOrgPerson)(*)
+  - Unix(posixAccount)
+  - Sombra(shadowAccount)
 *En caso de que haya mas modulos los eliminamos*
 
 - En el caso de grupos:
-  -Unix(posixAccount)
+  - Unix(posixAccount)
 *En caso de que haya mas modulos los eliminamos*
 
 - En el caso de usuarios:
-  -Cuenta(account)(*)
-  -Unix(posixAccount)
+  - Cuenta(account)(*)
+  - Unix(posixAccount)
 *En caso de que haya mas modulos los eliminamos*
 
 Ahora le damos al boton de guardar para que los cambios surjan efecto.
@@ -894,7 +894,7 @@ Ahora tenemos que particionar el disco, primero miraremos si esta particionado c
 
 Para particionarlo haremos lo siguiente:
 
-´´´
+```
 cfdisk /dev/sdb
 ````
 En donde pone elegir la tabla de particiones elegimos la opcion de *gpt* que es soportada por casi todos los sistemas operativos.
